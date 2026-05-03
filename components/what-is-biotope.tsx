@@ -40,14 +40,14 @@ const fragmentShader = `
 
   void main() {
     vec2 uv = coverUv(vUv, uResolution, uImageResolution);
-    float time = uTime * 0.52;
+    float time = uTime * 0.42;
 
-    float waveX = sin(uv.y * 9.0 + time) * 0.0035;
-    float waveY = cos(uv.x * 7.0 - time * 0.75) * 0.0025;
-    float detailX = sin(uv.y * 18.0 - time * 1.1) * 0.0011;
-    float detailY = cos(uv.x * 14.0 + time * 0.95) * 0.0009;
+    float waveX = sin(uv.y * 9.0 + time) * 0.0026;
+    float waveY = cos(uv.x * 7.0 - time * 0.75) * 0.0019;
+    float detailX = sin(uv.y * 18.0 - time * 1.1) * 0.0008;
+    float detailY = cos(uv.x * 14.0 + time * 0.95) * 0.0006;
 
-    vec2 sampleUv = uv + vec2(waveX + detailX, waveY + detailY);
+    vec2 sampleUv = clamp(uv + vec2(waveX + detailX, waveY + detailY), 0.001, 0.999);
     vec4 color = texture2D(uTexture, sampleUv);
 
     gl_FragColor = color;
@@ -142,7 +142,7 @@ export default function WhatIsBiotope() {
   }, []);
 
   return (
-    <section className="relative w-full overflow-hidden bg-[#08141a]">
+    <section className="relative w-full overflow-hidden">
       <div
         ref={containerRef}
         className="relative aspect-[16/7] w-full overflow-hidden"
