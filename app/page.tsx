@@ -11,28 +11,14 @@ import Objectives from "@/components/objectives";
 import Organizers from "@/components/organizers";
 import Prizes from "@/components/prizes";
 import RulesGuidelines from "@/components/rules-guidelines";
-import Image from "next/image";
+import WhatIsBiotope from "@/components/what-is-biotope";
 
 export default function HomePage() {
   return (
     <main className="bg-background overflow-hidden">
       <Header />
       <HeroSection />
-      <section className="relative w-full overflow-hidden">
-        <div className="water-banner relative aspect-[16/7] w-full overflow-hidden">
-          <Image
-            src="/img1.jpg"
-            alt="Underwater biotope landscape"
-            fill
-            className="water-banner-image object-cover"
-            priority={false}
-          />
-          <div className="water-banner-surface" />
-          <div className="water-banner-ripple" />
-          <div className="water-banner-caustics" />
-          <div className="water-banner-shimmer" />
-        </div>
-      </section>
+      <WhatIsBiotope />
       <AboutIBC />
       <Objectives />
       <Gallery />
