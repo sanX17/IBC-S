@@ -40,9 +40,12 @@ export default function WaterImage() {
           vec3 pos = position;
 
          pos.y += sin(pos.x * 2.0 + uTime * 0.6) * 0.015;
+
+
 pos.x += sin(pos.y * 2.0 + uTime * 0.5) * 0.01;
 
           gl_Position = vec4(pos, 1.0);
+
         }
       `,
 
@@ -54,12 +57,11 @@ uniform sampler2D uTexture;
 uniform float uTime;
 uniform vec2 uMouse;
 
-// 🔥 random noise
+// noise
 float random(vec2 st) {
   return fract(sin(dot(st.xy, vec2(12.9898,78.233))) * 43758.5453123);
 }
 
-// 🔥 smooth noise
 float noise(vec2 st) {
   vec2 i = floor(st);
   vec2 f = fract(st);
@@ -78,32 +80,48 @@ float noise(vec2 st) {
 
 void main() {
   vec2 uv = vUv;
+  // ⏱️ create repeating pulse (fast wobble burst)
+float pulse = exp(-mod(uTime * 1.2, 2.0) * 3.0);
 
-  // 🌊 layered noise (this is the magic)
-  float n1 = noise(uv * 3.0 + uTime * 0.2);
-  float n2 = noise(uv * 6.0 - uTime * 0.15);
+  // 🌊 smoother layered waves
+  float n1 = noise(uv * 2.5 + uTime * 0.25);
+  float n2 = noise(uv * 4.0 - uTime * 0.2);
 
-  float wave = (n1 + n2) * 0.02;
+  float wave = (n1 + n2) * 0.03;
 
-  // 💧 refraction-like distortion
-  uv.x += wave;
-  uv.y += wave * 0.6;
-  
-  // 🔥 ADD THIS HERE
-float jitter = noise(uv * 20.0 + uTime * 0.8) * 0.002;
-uv.x += jitter;
-uv.y += jitter * 0.5;
+  uv.x += wave * 1.2;
+uv.y += wave * 0.6;
 
+  // 🔥 micro jitter (alive feeling)
+  float jitter = noise(uv * 15.0 + uTime * 0.6) * 0.001;
+   
+  vec2 dir = normalize(vec2(jitter, jitter * 0.7));
+uv += dir * abs(jitter);
 
+  uv = clamp(uv, 0.001, 0.999);
 
-  // 🖱️ subtle interaction
+  // 🖱️ interaction
   float dist = distance(uv, uMouse);
-  
   uv += (uv - uMouse) * 0.01 * smoothstep(0.4, 0.0, dist);
 
-  vec4 color = texture2D(uTexture, uv);
+  // 💎 REFRACTION (RGB split — this is the magic)
+  float offset = wave * 0.02;
 
-  gl_FragColor = color;
+  float r = texture2D(uTexture, uv + offset).r;
+  float g = texture2D(uTexture, uv).g;
+  float b = texture2D(uTexture, uv - offset).b;
+
+  vec3 color = vec3(r, g, b);
+
+  // 🌊 soft blur / water softness
+  vec3 blur = texture2D(uTexture, uv + wave * 0.01).rgb;
+  color = mix(color, blur, 0.2);
+
+  // ✨ subtle light shimmer
+  float light = smoothstep(0.4, 1.0, wave);
+  color += light * 0.05;
+
+  gl_FragColor = vec4(color, 1.0);
 }
       `,
     });
