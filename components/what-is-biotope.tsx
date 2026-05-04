@@ -39,11 +39,8 @@ export default function WaterImage() {
 
           vec3 pos = position;
 
-          // 🌊 vertical floating
-          pos.y += sin(pos.x * 3.0 + uTime * 1.5) * 0.03;
-
-          // 🌊 horizontal wave
-          pos.x += sin(pos.y * 4.0 + uTime * 1.2) * 0.02;
+         pos.y += sin(pos.x * 2.0 + uTime * 0.6) * 0.015;
+pos.x += sin(pos.y * 2.0 + uTime * 0.5) * 0.01;
 
           gl_Position = vec4(pos, 1.0);
         }
@@ -52,26 +49,62 @@ export default function WaterImage() {
       fragmentShader: `
         precision highp float;
 
-        varying vec2 vUv;
-        uniform sampler2D uTexture;
-        uniform float uTime;
-        uniform vec2 uMouse;
+varying vec2 vUv;
+uniform sampler2D uTexture;
+uniform float uTime;
+uniform vec2 uMouse;
 
-        void main() {
-          vec2 uv = vUv;
+// 🔥 random noise
+float random(vec2 st) {
+  return fract(sin(dot(st.xy, vec2(12.9898,78.233))) * 43758.5453123);
+}
 
-          // 🌊 water distortion
-          uv.x += sin(uv.y * 10.0 + uTime * 2.0) * 0.02;
-          uv.y += sin(uv.x * 8.0 + uTime * 1.5) * 0.02;
+// 🔥 smooth noise
+float noise(vec2 st) {
+  vec2 i = floor(st);
+  vec2 f = fract(st);
 
-          // 🖱️ mouse ripple
-          float dist = distance(uv, uMouse);
-          uv += (uv - uMouse) * 0.05 * smoothstep(0.3, 0.0, dist);
+  float a = random(i);
+  float b = random(i + vec2(1.0, 0.0));
+  float c = random(i + vec2(0.0, 1.0));
+  float d = random(i + vec2(1.0, 1.0));
 
-          vec4 color = texture2D(uTexture, uv);
+  vec2 u = f * f * (3.0 - 2.0 * f);
 
-          gl_FragColor = color;
-        }
+  return mix(a, b, u.x) +
+         (c - a)* u.y * (1.0 - u.x) +
+         (d - b) * u.x * u.y;
+}
+
+void main() {
+  vec2 uv = vUv;
+
+  // 🌊 layered noise (this is the magic)
+  float n1 = noise(uv * 3.0 + uTime * 0.2);
+  float n2 = noise(uv * 6.0 - uTime * 0.15);
+
+  float wave = (n1 + n2) * 0.02;
+
+  // 💧 refraction-like distortion
+  uv.x += wave;
+  uv.y += wave * 0.6;
+  
+  // 🔥 ADD THIS HERE
+float jitter = noise(uv * 20.0 + uTime * 0.8) * 0.002;
+uv.x += jitter;
+uv.y += jitter * 0.5;
+
+
+
+  // 🖱️ subtle interaction
+  float dist = distance(uv, uMouse);
+  
+  uv += (uv - uMouse) * 0.01 * smoothstep(0.4, 0.0, dist);
+
+  vec4 color = texture2D(uTexture, uv);
+
+  gl_FragColor = color;
+}
       `,
     });
 
