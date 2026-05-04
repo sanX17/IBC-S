@@ -3,160 +3,102 @@
 import { useEffect, useRef } from "react";
 import * as THREE from "three";
 
-const vertexShader = `
-  varying vec2 vUv;
-
-  void main() {
-    vUv = uv;
-    gl_Position = vec4(position, 1.0);
-  }
-`;
-
-const fragmentShader = `
-  precision highp float;
-
-  uniform sampler2D uTexture;
-  uniform vec2 uResolution;
-  uniform vec2 uImageResolution;
-  uniform float uTime;
-
-  varying vec2 vUv;
-
-  vec2 coverUv(vec2 uv, vec2 screen, vec2 image) {
-    float screenRatio = screen.x / screen.y;
-    float imageRatio = image.x / image.y;
-    vec2 scaled = uv;
-
-    if (screenRatio > imageRatio) {
-      float scale = imageRatio / screenRatio;
-      scaled.y = uv.y * scale + (1.0 - scale) * 0.5;
-    } else {
-      float scale = screenRatio / imageRatio;
-      scaled.x = uv.x * scale + (1.0 - scale) * 0.5;
-    }
-
-    return scaled;
-  }
-
-  float noise(vec2 p) {
-    return sin(p.x) * sin(p.y);
-  }
-
-  void main() {
-    vec2 uv = coverUv(vUv, uResolution, uImageResolution);
-
-   float time = uTime * 1.2;
-
-// finer waves (higher frequency)
-float waveX = sin(uv.y * 20.0 + time * 1.2) * 0.008;
-float waveY = cos(uv.x * 22.0 + time * 1.5) * 0.006;
-
-// finer noise (smaller ripple details)
-float ripple = noise(uv * 25.0 + time * 1.5) * 0.004;
-
-uv.x += waveX + ripple;
-uv.y += waveY + ripple * 0.5;
-
-    // ✅ prevent edge stretching / white gaps
-    uv = clamp(uv, 0.001, 0.999);
-
-    vec4 color = texture2D(uTexture, uv);
-
-    gl_FragColor = color;
-  }
-`;
-
-export default function WhatIsBiotope() {
-  const containerRef = useRef<HTMLDivElement>(null);
+export default function WaterImage() {
+  const mountRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-
     const scene = new THREE.Scene();
-    const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
 
-    const geometry = new THREE.PlaneGeometry(2, 2);
-    const texture = new THREE.TextureLoader().load("/img2.jpg");
+    const camera = new THREE.OrthographicCamera(
+      -1, 1, 1, -1, 0.1, 10
+    );
+    camera.position.z = 1;
 
-    texture.colorSpace = THREE.SRGBColorSpace;
-    texture.minFilter = THREE.LinearFilter;
-    texture.magFilter = THREE.LinearFilter;
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    mountRef.current!.appendChild(renderer.domElement);
 
-    const uniforms = {
-      uTexture: { value: texture },
-      uResolution: { value: new THREE.Vector2(1, 1) },
-      uImageResolution: { value: new THREE.Vector2(2048, 1024) },
-      uTime: { value: 0 },
-    };
+    const loader = new THREE.TextureLoader();
+    const texture = loader.load("/orgimg.jpg"); // 👈 change this
+
+    const geometry = new THREE.PlaneGeometry(2, 2, 64, 64);
 
     const material = new THREE.ShaderMaterial({
-      uniforms,
-      vertexShader,
-      fragmentShader,
+      uniforms: {
+        uTexture: { value: texture },
+        uTime: { value: 0 },
+        uMouse: { value: new THREE.Vector2(0.5, 0.5) },
+      },
+
+      vertexShader: `
+        varying vec2 vUv;
+        uniform float uTime;
+
+        void main() {
+          vUv = uv;
+
+          vec3 pos = position;
+
+          // 🌊 vertical floating
+          pos.y += sin(pos.x * 3.0 + uTime * 1.5) * 0.03;
+
+          // 🌊 horizontal wave
+          pos.x += sin(pos.y * 4.0 + uTime * 1.2) * 0.02;
+
+          gl_Position = vec4(pos, 1.0);
+        }
+      `,
+
+      fragmentShader: `
+        precision highp float;
+
+        varying vec2 vUv;
+        uniform sampler2D uTexture;
+        uniform float uTime;
+        uniform vec2 uMouse;
+
+        void main() {
+          vec2 uv = vUv;
+
+          // 🌊 water distortion
+          uv.x += sin(uv.y * 10.0 + uTime * 2.0) * 0.02;
+          uv.y += sin(uv.x * 8.0 + uTime * 1.5) * 0.02;
+
+          // 🖱️ mouse ripple
+          float dist = distance(uv, uMouse);
+          uv += (uv - uMouse) * 0.05 * smoothstep(0.3, 0.0, dist);
+
+          vec4 color = texture2D(uTexture, uv);
+
+          gl_FragColor = color;
+        }
+      `,
     });
 
     const mesh = new THREE.Mesh(geometry, material);
-
-    // ✅ slight overscale to hide edges completely
-    mesh.scale.set(1.05, 1.05, 1);
-
     scene.add(mesh);
 
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    renderer.domElement.className = "absolute inset-0 h-full w-full";
-    container.appendChild(renderer.domElement);
-
-    const resize = () => {
-      const { width, height } = container.getBoundingClientRect();
-      if (!width || !height) return;
-
-      renderer.setSize(width, height, false);
-      uniforms.uResolution.value.set(width, height);
+    // 🖱️ mouse move
+    const onMouseMove = (e: MouseEvent) => {
+      material.uniforms.uMouse.value.x = e.clientX / window.innerWidth;
+      material.uniforms.uMouse.value.y = 1.0 - e.clientY / window.innerHeight;
     };
+    window.addEventListener("mousemove", onMouseMove);
 
-    let frameId: number;
-
-    const animate = (time: number) => {
-      uniforms.uTime.value = time * 0.0025;
+    // 🔄 animation loop
+    const animate = () => {
+      material.uniforms.uTime.value += 0.02;
       renderer.render(scene, camera);
-      frameId = requestAnimationFrame(animate);
+      requestAnimationFrame(animate);
     };
 
-    texture.onUpdate = () => {
-      const image = texture.image as { width?: number; height?: number };
-      if (image?.width && image?.height) {
-        uniforms.uImageResolution.value.set(image.width, image.height);
-      }
-    };
-
-    resize();
-    frameId = requestAnimationFrame(animate);
-
-    const resizeObserver = new ResizeObserver(resize);
-    resizeObserver.observe(container);
+    animate();
 
     return () => {
-      cancelAnimationFrame(frameId);
-      resizeObserver.disconnect();
-      geometry.dispose();
-      material.dispose();
-      texture.dispose();
-      renderer.dispose();
-
-      if (renderer.domElement.parentNode === container) {
-        container.removeChild(renderer.domElement);
-      }
+      window.removeEventListener("mousemove", onMouseMove);
+      mountRef.current?.removeChild(renderer.domElement);
     };
   }, []);
 
-  return (
-    <section className="relative w-full overflow-hidden">
-      <div
-        ref={containerRef}
-        className="relative aspect-[16/7] w-full overflow-hidden"
-      />
-    </section>
-  );
+  return <div ref={mountRef} className="w-full h-screen" />;
 }
