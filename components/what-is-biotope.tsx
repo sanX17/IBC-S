@@ -54,7 +54,7 @@ export default function WaterImage() {
     return () => observer.disconnect();
   }, []);
 
-  // 🌊 Three.js
+  // 🌊 Three.js background
   useEffect(() => {
     const scene = new THREE.Scene();
     const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 10);
@@ -178,19 +178,16 @@ export default function WaterImage() {
       </div>
 
       <style jsx>{`
-        /* 🐟 Fish */
         .fish {
           width: clamp(240px, 38vw, 700px);
           transform: translateX(-120vw) scale(0.85);
           transition: transform 1.1s cubic-bezier(0.22, 1, 0.36, 1);
         }
 
-        /* 🔥 FIX: move fish to right side */
         .fish.active {
           transform: translateX(clamp(15%, 20vw, 30%)) scale(1.35);
         }
 
-        /* ⚪ Panel */
         .white-panel {
           position: absolute;
           top: 0;
@@ -204,7 +201,6 @@ export default function WaterImage() {
           transition-delay: 1.2s;
 
           z-index: 10;
-
           display: flex;
           align-items: center;
         }
@@ -213,14 +209,11 @@ export default function WaterImage() {
           transform: translateX(0);
         }
 
-        /* 📝 Content */
         .content {
           opacity: 0;
           padding: clamp(24px, 4vw, 80px);
-
           max-width: min(42vw, 560px);
           width: 100%;
-
           transition: all 0.8s ease;
           transition-delay: 2.2s;
         }
@@ -244,25 +237,35 @@ export default function WaterImage() {
           max-width: 60ch;
         }
 
-        /* 📱 Mobile */
+        /* 📱 MOBILE FIX */
         @media (max-width: 768px) {
           .white-panel {
             width: 100%;
-            height: 85%;
+            height: 50%; /* 🔥 FIXED */
             bottom: 0;
             top: auto;
             transform: translateY(100%);
             transition: none;
             z-index: 30;
+            align-items: flex-start;
+          }
+
+          .content {
+            max-width: 100%;
+            padding: clamp(16px, 4vw, 28px);
+          }
+
+          .heading {
+            font-size: clamp(20px, 5vw, 26px);
+          }
+
+          p {
+            font-size: clamp(13px, 3.5vw, 15px);
+            line-height: 1.55;
           }
 
           .fish {
             transition: none;
-          }
-
-          .content {
-            transition: none;
-            max-width: 100%;
           }
         }
       `}</style>
