@@ -263,7 +263,7 @@ export default function WaterImage() {
             font-size: clamp(13px, 3.5vw, 15px);
             line-height: 1.55;
           }
-
+            /* 🐟 Fish */
           .fish {
             transition: none;
           }
