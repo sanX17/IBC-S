@@ -32,14 +32,8 @@ export default function WaterImage() {
           )
             .to(
               panelRef.current,
-              { y: "0%", duration: 0.9, ease: "power2.out" },
-              "+=0.2"
-            )
-            .fromTo(
-              contentRef.current,
-              { opacity: 0, y: 40 },
-              { opacity: 1, y: 0, duration: 0.8 },
-              "+=0.2"
+              { y: "0%", duration: 0.6, ease: "power2.out" }, // Panel slides up
+              "+=0.05" // Small delay after fish
             );
         } else {
           setStartAnim(true);
@@ -241,18 +235,23 @@ export default function WaterImage() {
         @media (max-width: 768px) {
           .white-panel {
             width: 100%;
-            height: 50%; /* 🔥 FIXED */
+            height: 50%;
             bottom: 0;
             top: auto;
             transform: translateY(100%);
             transition: none;
-            z-index: 30;
+            z-index: 5;
             align-items: flex-start;
+            overflow: hidden; /* Prevent content from showing outside panel */
           }
 
           .content {
             max-width: 100%;
             padding: clamp(16px, 4vw, 28px);
+            padding-top: clamp(80px, 12vh, 140px); /* Reduced top padding - text starts higher */
+            opacity: 1;
+            transform: none;
+            transition: none;
           }
 
           .heading {
@@ -263,9 +262,10 @@ export default function WaterImage() {
             font-size: clamp(13px, 3.5vw, 15px);
             line-height: 1.55;
           }
-            /* 🐟 Fish */
+
           .fish {
             transition: none;
+            z-index: 10;
           }
         }
       `}</style>
