@@ -34,22 +34,29 @@ export default function WaterImage() {
         const isMobile = window.innerWidth <= 768;
 
         if (isMobile) {
-          const tl = gsap.timeline();
+  const tl = gsap.timeline();
 
-          tl.fromTo(
-            fishRef.current,
-            { x: "-120vw", scale: 0.9 },
-            { x: "0vw", scale: 1.2, duration: 1, ease: "power3.out" }
-          )
-            .to(
-              panelRef.current,
-              { y: "0%", duration: 0.6, ease: "power2.out" },
-              "+=0.05"
-            )
-            .call(() => {
-              layoutReadyRef.current = true;
-            });
-        } else {
+  // 1️⃣ Fish enters first
+  tl.to(fishRef.current, {
+    x: "0vw",
+    duration: 1,
+    ease: "power3.out",
+  })
+
+    // 2️⃣ Small delay
+    .to({}, { duration: 0.25 })
+
+    // 3️⃣ Panel rises from bottom
+    .to(panelRef.current, {
+      y: "0%",
+      duration: 0.8,
+      ease: "power2.out",
+    })
+
+    .call(() => {
+      layoutReadyRef.current = true;
+    });
+} else {
           setStartAnim(true);
           desktopReadyTimeoutRef.current = window.setTimeout(() => {
             layoutReadyRef.current = true;
@@ -239,57 +246,118 @@ export default function WaterImage() {
       });
 
       // ✅ Timeline: only animate fish and panel. Content rides inside panel.
-      gsap
-        .timeline({
-          onComplete: () => {
-            exitAnimationCompleteRef.current = true;
-            unlockScroll();
-          },
-        })
-        // Phase 1a: Fish exits first (0s → 0.9s)
-        .to(
-          fish,
-          {
-            x: window.innerWidth * 1.15,
-            duration: 0.9,
-            ease: "power2.inOut",
-            overwrite: true,
-          },
-          0
-        )
-        // Phase 1b: Panel + text exits after small delay (0.3s → 1.2s)
-        .to(
-          panel,
-          {
-            x: window.innerWidth * 1.15,
-            duration: 0.9,
-            ease: "power2.inOut",
-            overwrite: true,
-          },
-          0.3
-        )
-        // Phase 1: Background crossfade (0s → 1.05s)
-        .to(
-          material.uniforms.uMix,
-          {
-            value: 1,
-            duration: 1.05,
-            ease: "power2.inOut",
-          },
-          0
-        )
-        // Phase 2: Second fish enters from left (1.35s → 2.4s)
-        .to(
-          fish2,
-          {
-            x: 0,
-            opacity: 1,
-            duration: 1.05,
-            ease: "power2.out",
-            overwrite: true,
-          },
-          1.35
-        )
+      const isMobile = window.innerWidth <= 768;
+
+if (isMobile) {
+  gsap
+    .timeline({
+      onComplete: () => {
+        exitAnimationCompleteRef.current = true;
+        unlockScroll();
+      },
+    })
+
+    // Fish exits RIGHT
+    .to(
+      fish,
+      {
+        x: window.innerWidth * 1.2,
+        duration: 0.9,
+        ease: "power2.inOut",
+        overwrite: true,
+      },
+      0
+    )
+
+    // Panel exits UP
+    .to(
+      panel,
+      {
+        y: "-120%",
+        duration: 0.9,
+        ease: "power2.inOut",
+        overwrite: true,
+      },
+      0.15
+    )
+
+    // Background transition
+    .to(
+      material.uniforms.uMix,
+      {
+        value: 1,
+        duration: 1,
+        ease: "power2.inOut",
+      },
+      0
+    )
+
+    // Second fish enters from LEFT
+    .fromTo(
+      fish2,
+      {
+        x: -window.innerWidth * 1.2,
+        opacity: 1,
+      },
+      {
+        x: 0,
+        opacity: 1,
+        duration: 1,
+        ease: "power3.out",
+        overwrite: true,
+      },
+      1
+    );
+} else {
+  gsap
+    .timeline({
+      onComplete: () => {
+        exitAnimationCompleteRef.current = true;
+        unlockScroll();
+      },
+    })
+    .to(
+      fish,
+      {
+        x: window.innerWidth * 1.15,
+        duration: 0.9,
+        ease: "power2.inOut",
+        overwrite: true,
+      },
+      0
+    )
+    .to(
+      panel,
+      {
+        x: window.innerWidth * 1.15,
+        duration: 0.9,
+        ease: "power2.inOut",
+        overwrite: true,
+      },
+      0.3
+    )
+    .to(
+      material.uniforms.uMix,
+      {
+        value: 1,
+        duration: 1.05,
+        ease: "power2.inOut",
+      },
+      0
+    )
+    .to(
+      fish2,
+      {
+        x: 0,
+        opacity: 1,
+        duration: 1.05,
+        ease: "power2.out",
+        overwrite: true,
+      },
+      1.35
+    );
+}
+       
         // Phase 2 ends — fish2 on new background, panel stays gone
     };
 
@@ -529,45 +597,110 @@ export default function WaterImage() {
           max-width: 60ch;
         }
 
-        /* 📱 MOBILE */
-        @media (max-width: 768px) {
-          .white-panel {
-            width: 100%;
-            height: 50%;
-            bottom: 0;
-            top: auto;
-            transform: translateY(100%);
-            transition: none;
-            z-index: 5;
-            align-items: flex-start;
-            overflow: hidden;
-            will-change: transform;
-          }
-
-          .content {
-            max-width: 100%;
-            padding: clamp(16px, 4vw, 28px);
-            padding-top: clamp(80px, 12vh, 140px);
-            padding-right: clamp(16px, 4vw, 28px);
-            opacity: 1;
-            transform: none;
-            transition: none;
-          }
-
-          .heading {
-            font-size: clamp(20px, 5vw, 26px);
-          }
-
-          p {
-            font-size: clamp(13px, 3.5vw, 15px);
-            line-height: 1.55;
-          }
-
+        /* 📱 TABLET (768px - 1024px) */
+        @media (max-width: 1024px) and (min-width: 769px) {
           .fish {
-            transition: none;
-            z-index: 10;
+            top: 42%;
+            left: 50%;
+            width: clamp(300px, 52vw, 560px);
+          }
+
+          .fish.active {
+            transform: translate(-50%, -50%) translateX(clamp(8%, 10vw, 14%))
+              scale(1.12);
+          }
+
+          .fish-secondary.active {
+            transform: translate(-50%, -50%) translateX(0) scale(1.12);
           }
         }
+
+        /* 📱 MOBILE (≤768px) */
+@media (max-width: 768px) {
+  /* Fish overlaps background + white panel */
+  .fish {
+    position: absolute;
+    top: 46%;
+    left: 50%;
+    width: clamp(260px, 82vw, 420px);
+
+    /* keep fish centered */
+    transform: translate(-50%, -50%) translateX(0) scale(1.08);
+
+    transition: none;
+    z-index: 20;
+
+    /* important */
+    pointer-events: none;
+  }
+
+  .fish.active {
+    transform: translate(-50%, -50%) translateX(0) scale(1.1);
+  }
+
+  .fish-secondary.active {
+    transform: translate(-50%, -50%) translateX(0) scale(1.1);
+  }
+
+  /* White panel */
+  .white-panel {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+
+    width: 100%;
+    height: 50%;
+
+    background: white;
+
+    transform: translateY(110%);
+    transition: none;
+
+    z-index: 5;
+
+    align-items: flex-start;
+    overflow: hidden;
+    will-change: transform;
+  }
+
+  .content {
+    max-width: 100%;
+    padding: clamp(16px, 4vw, 28px);
+    padding-top: clamp(28px, 5vh, 48px);
+    padding-right: clamp(16px, 4vw, 28px);
+
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+
+  .heading {
+    font-size: clamp(20px, 5vw, 26px);
+  }
+
+  p {
+    font-size: clamp(13px, 3.5vw, 15px);
+    line-height: 1.55;
+  }
+}
+
+/* 📱 Small phones (≤480px) */
+@media (max-width: 480px) {
+  .fish {
+    top: 44%;
+    width: clamp(220px, 86vw, 340px);
+  }
+
+  .fish.active {
+    transform: translate(-50%, -50%) translateX(-140vw) scale(1.08);
+  }
+
+  .fish-secondary.active {
+    transform: translate(-50%, -50%) translateX(0) scale(1.08);
+  }
+}
+
+       
       `}</style>
     </div>
   );
