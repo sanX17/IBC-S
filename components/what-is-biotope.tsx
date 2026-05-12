@@ -43,8 +43,8 @@ export default function WaterImage() {
           )
             .to(
               panelRef.current,
-              { y: "0%", duration: 0.6, ease: "power2.out" }, // Panel slides up
-              "+=0.05" // Small delay after fish
+              { y: "0%", duration: 0.6, ease: "power2.out" },
+              "+=0.05"
             )
             .call(() => {
               layoutReadyRef.current = true;
@@ -171,17 +171,21 @@ export default function WaterImage() {
     const fish = fishRef.current;
     const fish2 = fish2Ref.current;
     const panel = panelRef.current;
-    const content = contentRef.current;
     const material = materialRef.current;
 
-    if (!section || !fish || !fish2 || !panel || !content || !material) return;
+    // ✅ content is NOT included here — panel carries it automatically
+    if (!section || !fish || !fish2 || !panel || !material) return;
 
     let touchStartY = 0;
     let trigger: ScrollTrigger | null = null;
 
     const preventScroll = (event: Event) => event.preventDefault();
     const preventKeys = (event: KeyboardEvent) => {
-      if (["ArrowUp", "ArrowDown", "PageUp", "PageDown", " ", "Home", "End"].includes(event.key)) {
+      if (
+        ["ArrowUp", "ArrowDown", "PageUp", "PageDown", " ", "Home", "End"].includes(
+          event.key
+        )
+      ) {
         event.preventDefault();
       }
     };
@@ -214,42 +218,35 @@ export default function WaterImage() {
       exitTriggeredRef.current = true;
       exitAnimationCompleteRef.current = false;
       lockScroll();
-      // Disable the CSS entrance transitions before GSAP takes over exit motion.
+
+      // ✅ Kill CSS transitions so GSAP has full control
       fish.style.transition = "none";
       fish2.style.transition = "none";
       panel.style.transition = "none";
-      content.style.transition = "none";
-      gsap.killTweensOf([fish, fish2, panel, content, material.uniforms.uMix]);
+
+      // ✅ Only kill panel & fish tweens — content is a passenger inside panel
+      gsap.killTweensOf([fish, fish2, panel, material.uniforms.uMix]);
+
+      // ✅ Reset panel to its settled position (x:0)
       gsap.set(panel, {
         x: 0,
         xPercent: 0,
-        clipPath: "inset(0 0% 0 0)",
       });
-      gsap.set(content, {
-        x: 0,
-        opacity: 1,
-      });
+
       gsap.set(fish2, {
         x: -window.innerWidth * 1.2,
         opacity: 0,
       });
 
-      gsap.timeline({
-        onComplete: () => {
-          exitAnimationCompleteRef.current = true;
-          unlockScroll();
-        },
-      })
-        .to(
-          content,
-          {
-            opacity: 0,
-            duration: 0.28,
-            ease: "power2.out",
-            overwrite: true,
+      // ✅ Timeline: only animate fish and panel. Content rides inside panel.
+      gsap
+        .timeline({
+          onComplete: () => {
+            exitAnimationCompleteRef.current = true;
+            unlockScroll();
           },
-          0
-        )
+        })
+        // Phase 1a: Fish exits first (0s → 0.9s)
         .to(
           fish,
           {
@@ -260,6 +257,18 @@ export default function WaterImage() {
           },
           0
         )
+        // Phase 1b: Panel + text exits after small delay (0.3s → 1.2s)
+        .to(
+          panel,
+          {
+            x: window.innerWidth * 1.15,
+            duration: 0.9,
+            ease: "power2.inOut",
+            overwrite: true,
+          },
+          0.3
+        )
+        // Phase 1: Background crossfade (0s → 1.05s)
         .to(
           material.uniforms.uMix,
           {
@@ -269,16 +278,7 @@ export default function WaterImage() {
           },
           0
         )
-        .to(
-          panel,
-          {
-            clipPath: "inset(0 100% 0 0)",
-            duration: 0.8,
-            ease: "power2.inOut",
-            overwrite: true,
-          },
-          0.08
-        )
+        // Phase 2: Second fish enters from left (1.35s → 2.4s)
         .to(
           fish2,
           {
@@ -290,26 +290,7 @@ export default function WaterImage() {
           },
           1.35
         )
-        .to(
-          panel,
-          {
-            clipPath: "inset(0 0% 0 0)",
-            duration: 0.8,
-            ease: "power2.inOut",
-            overwrite: true,
-          },
-          2.35
-        )
-        .to(
-          content,
-          {
-            opacity: 1,
-            duration: 0.35,
-            ease: "power2.out",
-            overwrite: true,
-          },
-          2.75
-        );
+        // Phase 2 ends — fish2 on new background, panel stays gone
     };
 
     const releaseSection = (scrollDelta = 0) => {
@@ -328,7 +309,10 @@ export default function WaterImage() {
         trigger?.kill();
         ScrollTrigger.refresh();
 
-        const nextStep = Math.max(24, Math.min(Math.abs(scrollDelta) || 48, 120));
+        const nextStep = Math.max(
+          24,
+          Math.min(Math.abs(scrollDelta) || 48, 120)
+        );
         window.scrollBy({ top: nextStep, behavior: "auto" });
         releaseInProgressRef.current = false;
       });
@@ -423,7 +407,7 @@ export default function WaterImage() {
       {/* 🌊 Background */}
       <div ref={mountRef} className="absolute inset-0 z-0" />
 
-      {/* ⚪ Panel */}
+      {/* ⚪ Panel — content lives INSIDE, rides with panel automatically */}
       <div
         ref={panelRef}
         className={`white-panel ${startAnim ? "active" : ""}`}
@@ -494,14 +478,16 @@ export default function WaterImage() {
           width: 50%;
           height: 100%;
           background: white;
-
+          /* ✅ Panel slides in from left on entrance */
           transform: translateX(-100%);
           transition: transform 1s ease-out;
           transition-delay: 1.2s;
-
           z-index: 10;
           display: flex;
           align-items: center;
+          /* ✅ overflow: hidden keeps content clipped to panel bounds */
+          overflow: hidden;
+          will-change: transform;
         }
 
         .white-panel.active {
@@ -509,6 +495,7 @@ export default function WaterImage() {
         }
 
         .content {
+          /* ✅ No 'transition: all' — was fighting GSAP on exit */
           opacity: 0;
           padding: clamp(24px, 4vw, 80px);
           padding-right: clamp(120px, 12vw, 260px);
@@ -517,9 +504,10 @@ export default function WaterImage() {
           box-sizing: border-box;
           position: relative;
           z-index: 1;
-          will-change: opacity;
-          transition: all 0.8s ease;
+          /* ✅ Only animate opacity + translateY for entrance; GSAP won't touch this */
+          transition: opacity 0.8s ease, transform 0.8s ease;
           transition-delay: 2.2s;
+          transform: translateY(12px);
         }
 
         .content.show {
@@ -541,7 +529,7 @@ export default function WaterImage() {
           max-width: 60ch;
         }
 
-        /* 📱 MOBILE FIX */
+        /* 📱 MOBILE */
         @media (max-width: 768px) {
           .white-panel {
             width: 100%;
@@ -552,13 +540,14 @@ export default function WaterImage() {
             transition: none;
             z-index: 5;
             align-items: flex-start;
-            overflow: hidden; /* Prevent content from showing outside panel */
+            overflow: hidden;
+            will-change: transform;
           }
 
           .content {
             max-width: 100%;
             padding: clamp(16px, 4vw, 28px);
-            padding-top: clamp(80px, 12vh, 140px); /* Reduced top padding - text starts higher */
+            padding-top: clamp(80px, 12vh, 140px);
             padding-right: clamp(16px, 4vw, 28px);
             opacity: 1;
             transform: none;
